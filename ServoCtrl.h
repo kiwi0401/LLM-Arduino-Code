@@ -996,6 +996,15 @@ void functionActionC(){
 void robotCtrl(){
   // move ctrl.
   if(!debugMode && !funcMode){
+    // Check if we have received a request for accelerometer data
+    if(Serial.available() > 0) {
+      String command = Serial.readStringUntil('\n');
+      command.trim();
+      if(command == "GET_ACCEL") {
+        sendAccelData();
+      }
+    }
+    
     if(moveFB == 0 && moveLR == 0 && STAND_STILL == 0){
       standMassCenter(0, 0);
       GoalPosAll();
@@ -1095,4 +1104,17 @@ void wireDebugDetect(){
     }
     delay(1000);
   }
+}
+
+// Function to send accelerometer data over serial when requested
+void sendAccelData() {
+  accXYZUpdate(); // Update accelerometer data
+  
+  // Create JSON string with accelerometer data
+  String accelJSON = "{\"acc_x\":" + String(ACC_X) + 
+                     ",\"acc_y\":" + String(ACC_Y) + 
+                     ",\"acc_z\":" + String(ACC_Z) + "}";
+                     
+  // Send over serial
+  Serial.println(accelJSON);
 }
