@@ -65,6 +65,7 @@ int JSON_SEND_INTERVAL;
 #include "ServoCtrl.h"
 #include "PreferencesConfig.h"
 #include <ArduinoJson.h>
+#include "SerialProtocol.h"  // Include the serial protocol header
 
 StaticJsonDocument<200> docReceive;
 StaticJsonDocument<100> docSend;
@@ -77,87 +78,105 @@ void webServerInit();
 // var(variable), val(value).                  
 void serialCtrl(){
   if (Serial.available()){
-    // Read the JSON document from the "link" serial port
-    DeserializationError err = deserializeJson(docReceive, Serial);
-
-    if (err == DeserializationError::Ok){
-      UPPER_TYPE = 1;
-      docReceive["val"].as<int>();
-
-      int val = docReceive["val"];
-
-      if(docReceive["var"] == "funcMode"){
-        debugMode = 0;
-        gestureUD = 0;
-        gestureLR = 0;
-        if(val == 1){
-          if(funcMode == 1){funcMode = 0;Serial.println("Steady OFF");}
-          else if(funcMode == 0){funcMode = 1;Serial.println("Steady ON");}
+    // First check if it's a text command (starts with letter, not with '{')
+    String input = Serial.readStringUntil('\n');
+    input.trim();
+    
+    if (input.length() > 0) {
+      // Check if this looks like a JSON command (starts with '{')
+      if (input.startsWith("{")) {
+        // Parse JSON command
+        DeserializationError err = deserializeJson(docReceive, input);
+        
+        if (err == DeserializationError::Ok){
+          UPPER_TYPE = 1;
+          int val = docReceive["val"];
+          
+          // Process the command and send acknowledgment
+          processJSONCommand(docReceive);
+          sendAck();
+        } else {
+          // JSON parsing failed
+          Serial.println("ACK:JSON_PARSE_ERROR");
         }
-        else{
-          funcMode = val;
-          Serial.println(val);
-        }
-      }
-
-      else if(docReceive["var"] == "move"){
-        debugMode = 0;
-        funcMode  = 0;
-        digitalWrite(BUZZER, HIGH);
-        switch(val){
-          case 1: moveFB = 1; Serial.println("Forward");break;
-          case 2: moveLR =-1; Serial.println("TurnLeft");break;
-          case 3: moveFB = 0; Serial.println("FBStop");break;
-          case 4: moveLR = 1; Serial.println("TurnRight");break;
-          case 5: moveFB =-1; Serial.println("Backward");break;
-          case 6: moveLR = 0; Serial.println("LRStop");break;
-        }
-      }
-
-      else if(docReceive["var"] == "ges"){
-        debugMode = 0;
-        funcMode  = 0;
-        switch(val){
-          case 1: gestureUD += gestureSpeed;if(gestureUD > gestureOffSetMax){gestureUD = gestureOffSetMax;}break;
-          case 2: gestureUD -= gestureSpeed;if(gestureUD <-gestureOffSetMax){gestureUD =-gestureOffSetMax;}break;
-          case 3: break;
-          case 4: gestureLR -= gestureSpeed;if(gestureLR <-gestureOffSetMax){gestureLR =-gestureOffSetMax;}break;
-          case 5: gestureLR += gestureSpeed;if(gestureLR > gestureOffSetMax){gestureLR = gestureOffSetMax;}break;
-          case 6: break;
-        }
-        pitchYawRollHeightCtrl(gestureUD, gestureLR, 0, 0);
-      }
-
-      else if(docReceive["var"] == "light"){
-        switch(val){
-          case 0: setSingleLED(0,matrix.Color(0, 0, 0));setSingleLED(1,matrix.Color(0, 0, 0));break;
-          case 1: setSingleLED(0,matrix.Color(0, 32, 255));setSingleLED(1,matrix.Color(0, 32, 255));break;
-          case 2: setSingleLED(0,matrix.Color(255, 32, 0));setSingleLED(1,matrix.Color(255, 32, 0));break;
-          case 3: setSingleLED(0,matrix.Color(32, 255, 0));setSingleLED(1,matrix.Color(32, 255, 0));break;
-          case 4: setSingleLED(0,matrix.Color(255, 255, 0));setSingleLED(1,matrix.Color(255, 255, 0));break;
-          case 5: setSingleLED(0,matrix.Color(0, 255, 255));setSingleLED(1,matrix.Color(0, 255, 255));break;
-          case 6: setSingleLED(0,matrix.Color(255, 0, 255));setSingleLED(1,matrix.Color(255, 0, 255));break;
-          case 7: setSingleLED(0,matrix.Color(255, 64, 32));setSingleLED(1,matrix.Color(32, 64, 255));break;
-        }
-      }
-
-      else if(docReceive["var"] == "buzzer"){
-        switch(val){
-          case 0: digitalWrite(BUZZER, HIGH);break;
-          case 1: digitalWrite(BUZZER, LOW);break;
+      } else {
+        // Process as text command
+        if (processTextCommand(input)) {
+          // Command was recognized and processed
+          // (response was sent by the command handler)
+        } else {
+          // Command wasn't recognized
+          Serial.println("ACK:UNKNOWN_COMMAND");
         }
       }
     }
+  }
+}
 
-
-      // else if(docReceive['var'] == "ip"){
-      //     UPPER_IP = docReceive['ip'];
-      // }
-     
-
-    else {
-      while (Serial.available() > 0)
-        Serial.read();
+// Process JSON commands from the Raspberry Pi
+void processJSONCommand(StaticJsonDocument<200>& doc) {
+  const char* var = doc["var"];
+  int val = doc["val"];
+  
+  if (strcmp(var, "funcMode") == 0) {
+    debugMode = 0;
+    gestureUD = 0;
+    gestureLR = 0;
+    if(val == 1) {
+      if(funcMode == 1) {
+        funcMode = 0;
+        Serial.println("Steady OFF");
+      } else if(funcMode == 0) {
+        funcMode = 1;
+        Serial.println("Steady ON");
+      }
+    } else {
+      funcMode = val;
+      Serial.println(val);
+    }
+  }
+  else if (strcmp(var, "move") == 0) {
+    debugMode = 0;
+    funcMode  = 0;
+    digitalWrite(BUZZER, HIGH);
+    switch(val) {
+      case 1: moveFB = 1; Serial.println("Forward"); break;
+      case 2: moveLR =-1; Serial.println("TurnLeft"); break;
+      case 3: moveFB = 0; Serial.println("FBStop"); break;
+      case 4: moveLR = 1; Serial.println("TurnRight"); break;
+      case 5: moveFB =-1; Serial.println("Backward"); break;
+      case 6: moveLR = 0; Serial.println("LRStop"); break;
+    }
+  }
+  else if (strcmp(var, "ges") == 0) {
+    debugMode = 0;
+    funcMode  = 0;
+    switch(val) {
+      case 1: gestureUD += gestureSpeed; if(gestureUD > gestureOffSetMax) {gestureUD = gestureOffSetMax;} break;
+      case 2: gestureUD -= gestureSpeed; if(gestureUD < -gestureOffSetMax) {gestureUD = -gestureOffSetMax;} break;
+      case 3: break;
+      case 4: gestureLR -= gestureSpeed; if(gestureLR < -gestureOffSetMax) {gestureLR = -gestureOffSetMax;} break;
+      case 5: gestureLR += gestureSpeed; if(gestureLR > gestureOffSetMax) {gestureLR = gestureOffSetMax;} break;
+      case 6: break;
+    }
+    pitchYawRollHeightCtrl(gestureUD, gestureLR, 0, 0);
+  }
+  else if (strcmp(var, "light") == 0) {
+    switch(val) {
+      case 0: setSingleLED(0,matrix.Color(0, 0, 0)); setSingleLED(1,matrix.Color(0, 0, 0)); break;
+      case 1: setSingleLED(0,matrix.Color(0, 32, 255)); setSingleLED(1,matrix.Color(0, 32, 255)); break;
+      case 2: setSingleLED(0,matrix.Color(255, 32, 0)); setSingleLED(1,matrix.Color(255, 32, 0)); break;
+      case 3: setSingleLED(0,matrix.Color(32, 255, 0)); setSingleLED(1,matrix.Color(32, 255, 0)); break;
+      case 4: setSingleLED(0,matrix.Color(255, 255, 0)); setSingleLED(1,matrix.Color(255, 255, 0)); break;
+      case 5: setSingleLED(0,matrix.Color(0, 255, 255)); setSingleLED(1,matrix.Color(0, 255, 255)); break;
+      case 6: setSingleLED(0,matrix.Color(255, 0, 255)); setSingleLED(1,matrix.Color(255, 0, 255)); break;
+      case 7: setSingleLED(0,matrix.Color(255, 64, 32)); setSingleLED(1,matrix.Color(32, 64, 255)); break;
+    }
+  }
+  else if (strcmp(var, "buzzer") == 0) {
+    switch(val) {
+      case 0: digitalWrite(BUZZER, HIGH); break;
+      case 1: digitalWrite(BUZZER, LOW); break;
     }
   }
 }
@@ -244,32 +263,7 @@ void loop() {
   // Update gyro data in every loop cycle - critical for accurate integration
   gyroUpdate();
   
-  // Print gyro debug info at regular intervals
-  // if (millis() - lastGyroDebugTime >= GYRO_DEBUG_INTERVAL) {
-  //   // Update accelerometer data
-  //   accXYZUpdate();
-    
-  //   // Print formatted gyro/accelerometer data for debugging
-  //   Serial.println("==== GYRO DEBUG ====");
-  //   Serial.print("ACC_X: "); Serial.print(ACC_X);
-  //   Serial.print(" | ACC_Y: "); Serial.print(ACC_Y);
-  //   Serial.print(" | ACC_Z: "); Serial.println(ACC_Z);
-    
-  //   // Print raw gyro values
-  //   Serial.print("GYRO_RAW_X: "); Serial.print(GYRO_X_RAW);
-  //   Serial.print(" | GYRO_RAW_Y: "); Serial.print(GYRO_Y_RAW);
-  //   Serial.print(" | GYRO_RAW_Z: "); Serial.println(GYRO_Z_RAW);
-    
-  //   // Print accumulated angles
-  //   Serial.print("ANGLE_X: "); Serial.print(GYRO_ANGLE_X);
-  //   Serial.print(" | ANGLE_Y: "); Serial.print(GYRO_ANGLE_Y);
-  //   Serial.print(" | ANGLE_Z: "); Serial.println(GYRO_ANGLE_Z);
-    
-  //   Serial.println("===================");
-    
-  //   lastGyroDebugTime = millis();
-  // }
-  
+  // Rest of the loop functionality
   robotCtrl();
   allDataUpdate();
   wireDebugDetect();

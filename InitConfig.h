@@ -61,22 +61,17 @@ unsigned long lastGyroUpdate = 0;
 ICM20948_WE myIMU = ICM20948_WE(ICM20948_ADDR);
 
 void InitICM20948(){
-  // if(!myIMU.init()){
-  //   Serial.println("ICM20948 does not respond");
-  // }
-  // else{
-  //   Serial.println("ICM20948 is connected");
-  // }
-  // Serial.println("Position your ICM20948 flat and don't move it - calibrating...");
+  // Initialize the IMU sensor
   myIMU.init();
   delay(200);
   myIMU.autoOffsets();
-  // Serial.println("Done!"); 
-
+  
+  // Configure IMU settings for accelerometer
   myIMU.setAccRange(ICM20948_ACC_RANGE_2G);
   myIMU.setAccDLPF(ICM20948_DLPF_6);
   myIMU.setAccSampleRateDivider(10);
 
+  // Configure IMU settings for gyroscope
   myIMU.setGyrRange(ICM20948_GYRO_RANGE_250);
   myIMU.setGyrDLPF(ICM20948_DLPF_6);  
   myIMU.setGyrSampleRateDivider(10);
@@ -99,7 +94,7 @@ void accXYZUpdate(){
   ACC_Z = corrAccRaw.z;
 }
 
-// New function to update gyro data separately from accelerometer
+// Updated gyro data separately from accelerometer for better angle calculation
 void gyroUpdate() {
   unsigned long currentTime = millis();
   float deltaTime = (currentTime - lastGyroUpdate) / 1000.0; // Convert to seconds

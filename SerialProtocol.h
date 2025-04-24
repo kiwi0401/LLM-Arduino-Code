@@ -12,6 +12,19 @@
 #include <Arduino.h>
 #include <ArduinoJson.h>
 
+// External variable declarations from other files
+extern float ACC_X;
+extern float ACC_Y;
+extern float ACC_Z;
+extern float GYRO_X_RAW;
+extern float GYRO_Y_RAW;
+extern float GYRO_Z_RAW;
+extern float GYRO_ANGLE_X;
+extern float GYRO_ANGLE_Y;
+extern float GYRO_ANGLE_Z;
+extern void accXYZUpdate();
+extern void gyroUpdate();
+
 // Command types supported
 enum CommandType {
   TEXT_CMD,   // Plain text commands
@@ -34,12 +47,12 @@ void sendAccelData() {
 
 // Function to send gyroscope data over serial when requested
 void sendGyroData() {
-  // No need to call readSensor() here as it's now updated in the main loop
+  // No need to call readSensor() here as it's updated in the main loop
   
   // Create JSON string with gyroscope data
-  String gyroJSON = "{\"gyro_raw_x\":" + String(GYRO_X_RAW) + 
-                    ",\"gyro_raw_y\":" + String(GYRO_Y_RAW) + 
-                    ",\"gyro_raw_z\":" + String(GYRO_Z_RAW) + 
+  String gyroJSON = "{\"gyro_x\":" + String(GYRO_X_RAW) + 
+                    ",\"gyro_y\":" + String(GYRO_Y_RAW) + 
+                    ",\"gyro_z\":" + String(GYRO_Z_RAW) + 
                     ",\"angle_x\":" + String(GYRO_ANGLE_X) + 
                     ",\"angle_y\":" + String(GYRO_ANGLE_Y) + 
                     ",\"angle_z\":" + String(GYRO_ANGLE_Z) + "}";
