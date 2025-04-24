@@ -81,6 +81,8 @@ void serialCtrl(){
     // First check if it's a text command (starts with letter, not with '{')
     String input = Serial.readStringUntil('\n');
     input.trim();
+
+    Serial.println("COMMAND RECIEIVED: " + input);
     
     if (input.length() > 0) {
       // Check if this looks like a JSON command (starts with '{')
