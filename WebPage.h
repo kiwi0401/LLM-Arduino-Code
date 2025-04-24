@@ -168,6 +168,22 @@ static const char PROGMEM INDEX_HTML[] = R"rawliteral(
         -ms-transform: rotate(0deg);
         transform: rotate(0deg)
     }
+
+    .sensor-data {
+        position: relative;
+        top: 200px;
+        left: 50%;
+        margin-right: -50%;
+        transform: translate(-50%, -50%);
+        color: white;
+        font-family: monospace;
+        font-size: 14px;
+        background-color: rgba(0, 0, 0, 0.6);
+        padding: 10px;
+        border-radius: 5px;
+        width: 300px;
+        text-align: center;
+    }
     </style>
 </head>
 

@@ -34,28 +34,27 @@ void sendAccelData() {
 
 // Function to send gyroscope data over serial when requested
 void sendGyroData() {
-  // Update gyroscope data
-  myIMU.readSensor();
-  xyzFloat gyroRaw = myIMU.getGyrRawValues();
-  xyzFloat angles = myIMU.getAngles();
+  // No need to call readSensor() here as it's now updated in the main loop
   
   // Create JSON string with gyroscope data
-  String gyroJSON = "{\"gyro_x\":" + String(gyroRaw.x) + 
-                    ",\"gyro_y\":" + String(gyroRaw.y) + 
-                    ",\"gyro_z\":" + String(gyroRaw.z) + 
-                    ",\"angle_x\":" + String(angles.x) + 
-                    ",\"angle_y\":" + String(angles.y) + 
-                    ",\"angle_z\":" + String(angles.z) + "}";
+  String gyroJSON = "{\"gyro_raw_x\":" + String(GYRO_X_RAW) + 
+                    ",\"gyro_raw_y\":" + String(GYRO_Y_RAW) + 
+                    ",\"gyro_raw_z\":" + String(GYRO_Z_RAW) + 
+                    ",\"angle_x\":" + String(GYRO_ANGLE_X) + 
+                    ",\"angle_y\":" + String(GYRO_ANGLE_Y) + 
+                    ",\"angle_z\":" + String(GYRO_ANGLE_Z) + "}";
                     
   // Send over serial with the expected prefix
   Serial.println("GYRO_DATA:" + gyroJSON);
 }
 
-// Function to reset gyroscope calibration
+// Function to reset gyroscope calibration and accumulated angles
 void resetGyro() {
-  myIMU.init();
-  delay(100);
-  myIMU.autoOffsets();
+  // Reset accumulated angles
+  GYRO_ANGLE_X = 0;
+  GYRO_ANGLE_Y = 0;
+  GYRO_ANGLE_Z = 0;
+  
   Serial.println("ACK:GYRO_RESET");
 }
 

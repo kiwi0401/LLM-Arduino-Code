@@ -50,6 +50,10 @@ float gestureOffSetMax = 15;
 float gestureSpeed = 2;
 int STAND_STILL = 0;
 
+// Debug tracking variables
+unsigned long lastGyroDebugTime = 0;
+const int GYRO_DEBUG_INTERVAL = 500; // Print every 500ms
+
 const char* UPPER_IP = "";
 int UPPER_TYPE = 0;
 unsigned long LAST_JSON_SEND;
@@ -237,9 +241,39 @@ void setup() {
 
 // main loop.
 void loop() {
+  // Update gyro data in every loop cycle - critical for accurate integration
+  gyroUpdate();
+  
+  // Print gyro debug info at regular intervals
+  // if (millis() - lastGyroDebugTime >= GYRO_DEBUG_INTERVAL) {
+  //   // Update accelerometer data
+  //   accXYZUpdate();
+    
+  //   // Print formatted gyro/accelerometer data for debugging
+  //   Serial.println("==== GYRO DEBUG ====");
+  //   Serial.print("ACC_X: "); Serial.print(ACC_X);
+  //   Serial.print(" | ACC_Y: "); Serial.print(ACC_Y);
+  //   Serial.print(" | ACC_Z: "); Serial.println(ACC_Z);
+    
+  //   // Print raw gyro values
+  //   Serial.print("GYRO_RAW_X: "); Serial.print(GYRO_X_RAW);
+  //   Serial.print(" | GYRO_RAW_Y: "); Serial.print(GYRO_Y_RAW);
+  //   Serial.print(" | GYRO_RAW_Z: "); Serial.println(GYRO_Z_RAW);
+    
+  //   // Print accumulated angles
+  //   Serial.print("ANGLE_X: "); Serial.print(GYRO_ANGLE_X);
+  //   Serial.print(" | ANGLE_Y: "); Serial.print(GYRO_ANGLE_Y);
+  //   Serial.print(" | ANGLE_Z: "); Serial.println(GYRO_ANGLE_Z);
+    
+  //   Serial.println("===================");
+    
+  //   lastGyroDebugTime = millis();
+  // }
+  
   robotCtrl();
   allDataUpdate();
   wireDebugDetect();
+  accXYZUpdate();
 }
 
 

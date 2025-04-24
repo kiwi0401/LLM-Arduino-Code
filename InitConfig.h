@@ -49,6 +49,15 @@ float ACC_X;
 float ACC_Y;
 float ACC_Z;
 
+// Global variables for gyro data
+float GYRO_X_RAW;
+float GYRO_Y_RAW;
+float GYRO_Z_RAW;
+float GYRO_ANGLE_X;
+float GYRO_ANGLE_Y;
+float GYRO_ANGLE_Z;
+unsigned long lastGyroUpdate = 0;
+
 ICM20948_WE myIMU = ICM20948_WE(ICM20948_ADDR);
 
 void InitICM20948(){
@@ -67,6 +76,16 @@ void InitICM20948(){
   myIMU.setAccRange(ICM20948_ACC_RANGE_2G);
   myIMU.setAccDLPF(ICM20948_DLPF_6);
   myIMU.setAccSampleRateDivider(10);
+
+  myIMU.setGyrRange(ICM20948_GYRO_RANGE_250);
+  myIMU.setGyrDLPF(ICM20948_DLPF_6);  
+  myIMU.setGyrSampleRateDivider(10);
+
+  // Reset gyro angle values
+  GYRO_ANGLE_X = 0;
+  GYRO_ANGLE_Y = 0;
+  GYRO_ANGLE_Z = 0;
+  lastGyroUpdate = millis();
 }
 
 void accXYZUpdate(){
@@ -80,7 +99,29 @@ void accXYZUpdate(){
   ACC_Z = corrAccRaw.z;
 }
 
-
+// New function to update gyro data separately from accelerometer
+void gyroUpdate() {
+  unsigned long currentTime = millis();
+  float deltaTime = (currentTime - lastGyroUpdate) / 1000.0; // Convert to seconds
+  
+  myIMU.readSensor();
+  xyzFloat gyroRaw = myIMU.getGyrValues();
+  
+  // Store raw values
+  GYRO_X_RAW = gyroRaw.x;
+  GYRO_Y_RAW = gyroRaw.y;
+  GYRO_Z_RAW = gyroRaw.z;
+  
+  // Accumulate angles - only if delta time is reasonable (avoid first run or overflow)
+  if (deltaTime > 0 && deltaTime < 0.2) {
+    // Simple integration: angle += rate * time
+    GYRO_ANGLE_X += GYRO_X_RAW * deltaTime;
+    GYRO_ANGLE_Y += GYRO_Y_RAW * deltaTime;
+    GYRO_ANGLE_Z += GYRO_Z_RAW * deltaTime;
+  }
+  
+  lastGyroUpdate = currentTime;
+}
 
 // <<<<<<<<<========INA219:0x42========>>>>>>>>
 #include <INA219_WE.h>
